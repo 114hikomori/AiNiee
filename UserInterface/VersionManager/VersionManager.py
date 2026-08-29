@@ -18,7 +18,7 @@ from qfluentwidgets import (MessageBox, CardWidget, TitleLabel, BodyLabel, Stron
                             InfoBar, InfoBarPosition, SubtitleLabel, MessageBoxBase)
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Config.Config import ConfigMixin
-from ModuleFolders.Config.FilePathConfig import downloads_dir, resource_path, is_windows_installer_build
+from ModuleFolders.Config.FilePathConfig import downloads_dir, resource_path
 from ModuleFolders.Infrastructure.Platform.PlatformPaths import is_macos, is_windows, release_api_url
 from ModuleFolders.Log.Log import LogMixin
 from UserInterface.Widget.Toast import ToastMixin
@@ -85,8 +85,6 @@ class VersionManager(ConfigMixin, LogMixin, ToastMixin, Base):
     def _update_file_suffix(self) -> str:
         if is_macos():
             return ".dmg"
-        if is_windows_installer_build():
-            return ".exe"
         return ".zip"
 
     def _download_paths(self):
@@ -111,8 +109,6 @@ class VersionManager(ConfigMixin, LogMixin, ToastMixin, Base):
     def _expected_update_asset_suffix(self) -> str:
         if is_macos():
             return f"-{self._macos_arch()}.dmg"
-        if is_windows_installer_build():
-            return "-Windows-Setup.exe"
         return ".zip"
 
     def _find_download_url(self, assets: list[dict]) -> str | None:
@@ -1005,39 +1001,6 @@ class VersionManager(ConfigMixin, LogMixin, ToastMixin, Base):
                 if self.latest_version_url:
                     QDesktopServices.openUrl(QUrl(self.latest_version_url))
                     return
-
-            if is_windows() and update_file.lower().endswith(".exe"):
-                if not os.path.exists(update_file):
-                    self.error(f"Installer not found: {update_file}")
-                    if self.main_window:
-                        InfoBar.error(
-                            title=self.tra("更新错误"),
-                            content=self.tra("找不到安装包，请手动下载安装最新版本"),
-                            orient=Qt.Horizontal,
-                            isClosable=True,
-                            position=InfoBarPosition.TOP,
-                            duration=3000,
-                            parent=self.main_window,
-                        )
-                    return
-                log_path = str(downloads_dir() / "AiNiee-installer-update.log")
-                from ModuleFolders.Infrastructure.Platform.SingleInstance import acquire_app_mutex, release_app_mutex
-                release_app_mutex()
-                try:
-                    subprocess.Popen(
-                        [update_file, "/VERYSILENT", "/NORESTART", "/FORCECLOSEAPPLICATIONS", "/RELAUNCH=1", f"/LOG={log_path}"],
-                        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
-                    )
-                except Exception:
-                    acquire_app_mutex()
-                    raise
-                _, _, download_info_file = self._download_paths()
-                try:
-                    os.remove(str(download_info_file))
-                except OSError:
-                    pass
-                self._exit_for_update()
-                return
 
             updater_path = str(resource_path("Updater", "updater.exe"))
 

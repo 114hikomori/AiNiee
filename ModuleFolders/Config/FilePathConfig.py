@@ -96,16 +96,6 @@ def portable_fallback_active() -> bool:
     return _portable_requested() and not _portable_writable()
 
 
-# 打包后的 Windows 安装版：{app} 下存在安装器（[Files]）写入的 installed.flag。
-def is_windows_installer_build() -> bool:
-    if not (_is_windows() and getattr(sys, "frozen", False)):
-        return False
-    # 便携标记优先于可能残留的 installed.flag（便携 zip 自带 portable.txt）。
-    if _portable_marker_present():
-        return False
-    return (executable_root() / "installed.flag").exists()
-
-
 # 随程序打包的 Resource 目录。
 def resource_root() -> Path:
     override = os.environ.get("AINIEE_RESOURCE_DIR")
