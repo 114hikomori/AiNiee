@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Config.Config import ConfigMixin
 from ModuleFolders.Config.FilePathConfig import check_regex_path
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 from ModuleFolders.Log.Log import LogMixin
 from ModuleFolders.Service.Cache.CacheManager import CacheManager
 from ModuleFolders.Service.Cache.CacheItem import TranslationStatus
@@ -69,23 +70,24 @@ class RuleChecker(ConfigMixin, LogMixin, Base):
                 merged_rows.append({
                     "markers": marker,
                     "info": self._normalize_identity(row.get("note")),
-                    "regex": "",
+                    "regex": False,
                 })
                 seen_markers.add(marker)
 
-        public_rows = self.config.get("exclusion_list_data", [])
+        public_rows = RegexSwitchHelper.normalize_exclusion_rows(
+            self.config.get("exclusion_list_data", [])
+        )
         if isinstance(public_rows, list):
             for row in public_rows:
                 if not isinstance(row, dict):
                     continue
 
-                regex = self._normalize_identity(row.get("regex"))
                 marker = self._normalize_identity(row.get("markers"))
-                if regex:
+                if RegexSwitchHelper.is_regex_enabled(row):
                     merged_rows.append({
                         "markers": marker,
                         "info": self._normalize_identity(row.get("info")),
-                        "regex": regex,
+                        "regex": True,
                     })
                     continue
 
@@ -95,7 +97,7 @@ class RuleChecker(ConfigMixin, LogMixin, Base):
                 merged_rows.append({
                     "markers": marker,
                     "info": self._normalize_identity(row.get("info")),
-                    "regex": "",
+                    "regex": False,
                 })
                 seen_markers.add(marker)
 
@@ -215,26 +217,21 @@ class RuleChecker(ConfigMixin, LogMixin, Base):
 
         if include_exclusion:
             ex_data = exclusion_data if exclusion_data is not None else self._collect_merged_exclusion_data()
-            for item in ex_data:
-                regex = self._normalize_identity(item.get("regex"))
-                markers = self._normalize_identity(item.get("markers"))
-                if regex:
-                    patterns.append(regex)
-                elif markers:
-                    patterns.append(re.escape(markers))
+            for item in RegexSwitchHelper.normalize_exclusion_rows(ex_data):
+                pattern = RegexSwitchHelper.build_re_pattern(item, "markers")
+                if pattern is not None:
+                    patterns.append(pattern.pattern)
         return patterns
 
     def _rule_check_exclusion(self, src, dst, data):
         errs = []
-        for item in data:
-            regex = item.get("regex")
-            markers = item.get("markers")
-            pat = regex if regex else (re.escape(markers) if markers else None)
-            if not pat:
+        for item in RegexSwitchHelper.normalize_exclusion_rows(data):
+            pattern = RegexSwitchHelper.build_re_pattern(item, "markers")
+            if pattern is None:
                 continue
 
             try:
-                for match in re.finditer(pat, src):
+                for match in pattern.finditer(src):
                     if match.group(0) not in dst:
                         if not errs:
                             errs.append(self._build_missing_preserve_error("禁翻表错误", match.group(0)))

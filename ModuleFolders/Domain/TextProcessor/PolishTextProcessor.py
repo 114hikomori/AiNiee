@@ -1,6 +1,8 @@
 import re
 from typing import List, Dict, Optional, Any
 
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
+
 # 与TextProcessor基本一样
 class PolishTextProcessor():
 
@@ -31,14 +33,15 @@ class PolishTextProcessor():
         if not rules_data:
             return compiled_rules
 
-        for rule in rules_data:
+        for rule in RegexSwitchHelper.normalize_replacement_rows(rules_data):
             new_rule = rule.copy()
-            # 如果规则中包含 "regex" 键，则进行编译
-            if regex_str := rule.get("regex"):
+            if RegexSwitchHelper.is_regex_enabled(rule):
+                regex_str = rule.get("src", "")
                 try:
                     new_rule["compiled_regex"] = re.compile(regex_str)
                 except re.error as e:
-                    print(f"警告：编译正则表达式 '{regex_str}' 时出错: {e}")
+                    RegexSwitchHelper.warn_invalid_re_pattern(regex_str, e)
+                    continue
             compiled_rules.append(new_rule)
         return compiled_rules
 

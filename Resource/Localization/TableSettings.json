@@ -6,11 +6,11 @@
       "English": "Glossary",
       "日本語": "用語集"
     },
-    "通过构建术语表来引导模型翻译，可实现统一翻译、补充信息等功能\n△触发机制: 文本含有原名或者原名的正则匹配生效  ◯填写示例:  ダリヤ  |  达莉雅  |  女性的名字": {
-      "简中": "通过构建术语表来引导模型翻译，可实现统一翻译、补充信息等功能\n△触发机制: 文本含有原名或者原名的正则匹配生效  ◯填写示例:  ダリヤ  |  达莉雅  |  女性的名字",
-      "繁中": "透過建立術語表來引導模型翻譯，可實現統一翻譯、補充資訊等功能。\n△觸發機制：文本含有來源術語或符合其正則表達式匹配。  ◯範例：ダリヤ  |  達莉雅  |  女性的名字",
-      "English": "Use a glossary to guide model translation for consistent translations, supplementary info, etc.\n△Trigger: Text contains the source term or matches its Regular Expression.  ◯Example: ダリヤ  |  Dahlia  |  Female name",
-      "日本語": "用語集を構築してモデル翻訳を誘導し、翻訳の統一や情報補足などを実現します。\n△トリガー：テキストに元の用語が含まれるか、正規表現に一致する場合。  ◯例： 达莉雅  |  ダリヤ  |  女性の名前"
+    "通过构建术语表来引导模型翻译，可实现统一翻译、补充信息等功能\n△匹配方式: 正则开关关闭时按原文字面匹配，开启时将原文作为正则表达式  ◯填写示例:  ダリヤ  |  达莉雅  |  女性的名字": {
+      "简中": "通过构建术语表来引导模型翻译，可实现统一翻译、补充信息等功能\n△匹配方式：正则开关关闭时按原文字面匹配，开启时将原文作为正则表达式。  ◯填写示例：ダリヤ  |  达莉雅  |  女性的名字",
+      "繁中": "透過建立術語表來引導模型翻譯，可實現統一翻譯、補充資訊等功能。\n△匹配方式：正則開關關閉時按原文字面匹配，開啟時將原文作為正則表達式。  ◯範例：ダリヤ  |  達莉雅  |  女性的名字",
+      "English": "Use a glossary to guide model translation for consistent translations and supplementary information.\n△Match mode: With Regex off, the source is matched literally; with Regex on, it is treated as a regular expression.  ◯Example: ダリヤ  |  Dahlia  |  Female name",
+      "日本語": "用語集を構築してモデル翻訳を誘導し、翻訳の統一や情報補足を行います。\n△一致方法：正規表現スイッチがオフの場合は原文を文字どおりに照合し、オンの場合は正規表現として扱います。  ◯例：ダリヤ  |  ダリヤ  |  女性の名前"
     },
     "原文": {
       "简中": "原文",
@@ -189,11 +189,11 @@
       "English": "Do Not Translate List",
       "日本語": "禁翻リスト"
     },
-    "通过构建禁翻表来引导模型，禁止翻译文本中的特殊标记符，占位符，代码段等内容\n△触发机制: 文本含有标记符，或者正则表达式匹配生效  ◯填写示例:  //F[N1]  |  游戏文本标记符号  |  //[A-Z]\\[.*?\\]": {
-      "简中": "通过构建禁翻表来引导模型，禁止翻译文本中的特殊标记符，占位符，代码段等内容\n△触发机制: 文本含有标记符，或者正则表达式匹配生效。  ◯填写示例:  //F[N1]  |  游戏文本标记符号  |  //[A-Z]\\[.*?\\]",
-      "繁中": "透過構建禁翻表來引導模型，禁止翻譯文本中的特殊標記符、佔位符、代碼段等內容。\n△觸發機制：當文本含有指定標記符，或符合正則表達式時觸發。  ◯示例：//F[N1]  |  遊戲文本標記符  |  //[A-Z]\\[.*?\\] ",
-      "English": "Build a 'Do Not Translate' list to guide the model, preventing translation of specific elements like special markers, placeholders, and code snippets.  ◯Trigger: Activates when text contains specified markers or matches a regular expression.\nExample: //F[N1]  |  Game text marker  |  //[A-Z]\\[.*?\\]",
-      "日本語": "翻訳禁止リストを作成してモデルを誘導し、テキスト内の特殊マーカー、プレースホルダー、コード断片などの翻訳を防止します。\n△トリガー：テキストに指定マーカーが含まれるか、正規表現に一致した場合に作動。  ◯例：//F[N1]  |  ゲームテキストマーカー  |  //[A-Z]\\[.*?\\]"
+    "通过构建禁翻表来引导模型，禁止翻译文本中的特殊标记符，占位符，代码段等内容\n△匹配方式: 正则开关关闭时按标记符字面匹配，开启时将标记符作为正则表达式  ◯填写示例:  //F[N1]  |  游戏文本标记符号": {
+      "简中": "通过构建禁翻表来引导模型，禁止翻译文本中的特殊标记符、占位符、代码段等内容。\n△匹配方式：正则开关关闭时按标记符字面匹配，开启时将标记符作为正则表达式。  ◯填写示例：//F[N1]  |  游戏文本标记符号",
+      "繁中": "透過構建禁翻表來引導模型，禁止翻譯文本中的特殊標記符、佔位符、代碼段等內容。\n△匹配方式：正則開關關閉時按標記符字面匹配，開啟時將標記符作為正則表達式。  ◯示例：//F[N1]  |  遊戲文本標記符",
+      "English": "Build a Do Not Translate list for special markers, placeholders, and code snippets.\n△Match mode: With Regex off, the marker is matched literally; with Regex on, it is treated as a regular expression.  ◯Example: //F[N1]  |  Game text marker",
+      "日本語": "翻訳禁止リストを作成し、特殊マーカー、プレースホルダー、コード断片などの翻訳を防止します。\n△一致方法：正規表現スイッチがオフの場合はマーカーを文字どおりに照合し、オンの場合は正規表現として扱います。  ◯例：//F[N1]  |  ゲームテキストマーカー"
     },
     "标记符": {
       "简中": "标记符",
@@ -228,11 +228,11 @@
       "English": "Pre-translation Replacement",
       "日本語": "翻訳前置換"
     },
-    "在翻译开始前，将原文中匹配的部分替换为指定的文本，执行的顺序为从上到下依次替换": {
-      "简中": "在翻译开始前，将原文中匹配的部分替换为指定的文本，执行的顺序为从上到下依次替换",
-      "繁中": "在翻譯開始前，將原文中匹配的部分替換為指定的文本，執行的順序為從上到下依次替換",
-      "English": "Before translation, replace matched text in the original with specified text, sequentially from top to bottom.",
-      "日本語": "翻訳開始前に、原文の一致箇所を指定テキストに置換します。上から順に実行されます。"
+    "在翻译开始前，将原文中匹配的部分替换为指定的文本，执行的顺序为从上到下依次替换\n△匹配方式: 正则开关关闭时按原文本字面匹配，开启时将原文本作为正则表达式": {
+      "简中": "在翻译开始前，将原文中匹配的部分替换为指定文本，执行顺序为从上到下。\n△匹配方式：正则开关关闭时按原文本字面匹配，开启时将原文本作为正则表达式。",
+      "繁中": "在翻譯開始前，將原文中匹配的部分替換為指定文本，執行順序為從上到下。\n△匹配方式：正則開關關閉時按原文字面匹配，開啟時將原文作為正則表達式。",
+      "English": "Before translation, replace matching source text from top to bottom.\n△Match mode: With Regex off, source text is matched literally; with Regex on, it is treated as a regular expression.",
+      "日本語": "翻訳開始前に、原文の一致箇所を上から順に指定テキストへ置換します。\n△一致方法：正規表現スイッチがオフの場合は文字どおりに照合し、オンの場合は正規表現として扱います。"
     },
     "导出_译前替换": {
       "简中": "导出_译前替换",
@@ -246,11 +246,11 @@
       "English": "Post-translation Replacement",
       "日本語": "翻訳後置換"
     },
-    "在翻译完成后，将译文中匹配的部分替换为指定的文本，执行的顺序为从上到下依次替换": {
-      "简中": "在翻译完成后，将译文中匹配的部分替换为指定的文本，执行的顺序为从上到下依次替换",
-      "繁中": "在翻譯完成後，將譯文中匹配的部分替換為指定的文本，執行的順序為從上到下依次替換",
-      "English": "After translation, replace matched text in the translation with specified text, sequentially from top to bottom.",
-      "日本語": "翻訳完了後、訳文の一致箇所を指定テキストに置換します。上から順に実行されます。"
+    "在翻译完成后，将译文中匹配的部分替换为指定的文本，执行的顺序为从上到下依次替换\n△匹配方式: 正则开关关闭时按原文本字面匹配，开启时将原文本作为正则表达式": {
+      "简中": "在翻译完成后，将译文中匹配的部分替换为指定文本，执行顺序为从上到下。\n△匹配方式：正则开关关闭时按原文本字面匹配，开启时将原文本作为正则表达式。",
+      "繁中": "在翻譯完成後，將譯文中匹配的部分替換為指定文本，執行順序為從上到下。\n△匹配方式：正則開關關閉時按原文字面匹配，開啟時將原文作為正則表達式。",
+      "English": "After translation, replace matching translated text from top to bottom.\n△Match mode: With Regex off, source text is matched literally; with Regex on, it is treated as a regular expression.",
+      "日本語": "翻訳完了後、訳文の一致箇所を上から順に指定テキストへ置換します。\n△一致方法：正規表現スイッチがオフの場合は文字どおりに照合し、オンの場合は正規表現として扱います。"
     },
     "导出_译后替换": {
       "简中": "导出_译后替换",

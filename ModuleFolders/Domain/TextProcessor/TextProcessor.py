@@ -3,6 +3,7 @@ import re
 from typing import List, Dict, Tuple, Any, Optional
 
 from ModuleFolders.Config.FilePathConfig import regex_path
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 
 class TextProcessor():
     # 定义日语字符集的正则表达式
@@ -345,12 +346,16 @@ class TextProcessor():
             return compiled_rules
 
         # 遍历文本替换的数据
-        for rule in rules_data:
+        for rule in RegexSwitchHelper.normalize_replacement_rows(rules_data):
             new_rule = rule.copy()
 
-            # 如果有正则，则进行预编译，如果没有则原样
-            if regex_str := rule.get("regex"):
-                new_rule["compiled_regex"] = re.compile(regex_str)
+            if RegexSwitchHelper.is_regex_enabled(rule):
+                regex_str = rule.get("src", "")
+                try:
+                    new_rule["compiled_regex"] = re.compile(regex_str)
+                except re.error as error:
+                    RegexSwitchHelper.warn_invalid_re_pattern(regex_str, error)
+                    continue
 
             compiled_rules.append(new_rule)
         return compiled_rules
@@ -366,12 +371,10 @@ class TextProcessor():
         patterns.extend(file_patterns)
 
         # 读取禁翻表内容
-        if exclusion_list_data:
-            for item in exclusion_list_data:
-                if regex_str := item.get("regex"):
-                    if regex_str: patterns.append(regex_str)
-                elif markers := item.get("markers"):
-                    if markers: patterns.append(re.escape(markers))
+        for item in RegexSwitchHelper.normalize_exclusion_rows(exclusion_list_data):
+            pattern = RegexSwitchHelper.build_re_pattern(item, "markers")
+            if pattern is not None:
+                patterns.append(pattern.pattern)
         return patterns
 
     def _build_dynamic_pattern_strings(self, base_patterns: List[str], format_string: str) -> List[str]:

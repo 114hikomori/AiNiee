@@ -10,6 +10,7 @@ from ModuleFolders.Config.FilePathConfig import (
     resource_path,
 )
 from ModuleFolders.Infrastructure.Platform.RuntimeSetup import migrate_config_if_needed
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 
 
 class ConfigMixin:
@@ -74,6 +75,8 @@ class ConfigMixin:
                         pass
                     config = {}
 
+                needs_write = RegexSwitchHelper.normalize_config(config)
+
                 # 旧版 DeepSeek 配置临时兼容块。
                 # 当旧版内置配置不再需要自动修复时，可直接删除此块。
                 platforms = config.get("platforms")
@@ -82,10 +85,13 @@ class ConfigMixin:
                     if deepseek_platform.get("think_switch") is False and deepseek_platform.get("think_depth") == "low":
                         deepseek_platform["think_switch"] = True
                         deepseek_platform["think_depth"] = "high"
-                        tmp_path = f"{ConfigMixin.CONFIG_PATH}.tmp"
-                        with open(tmp_path, "w", encoding="utf-8") as writer:
-                            writer.write(json.dumps(config, indent=4, ensure_ascii=False))
-                        os.replace(tmp_path, ConfigMixin.CONFIG_PATH)
+                        needs_write = True
+
+                if needs_write:
+                    tmp_path = f"{ConfigMixin.CONFIG_PATH}.tmp"
+                    with open(tmp_path, "w", encoding="utf-8") as writer:
+                        writer.write(json.dumps(config, indent=4, ensure_ascii=False))
+                    os.replace(tmp_path, ConfigMixin.CONFIG_PATH)
             else:
                 print("[[red]WARNING[/]] Config file does not exist ...")
 

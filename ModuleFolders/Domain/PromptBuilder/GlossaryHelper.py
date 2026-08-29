@@ -1,21 +1,19 @@
-import regex
-import regex._regex_core
 from functools import lru_cache
+
+import regex
+
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 
 
 _CACHE_MAXSIZE = 8192
 
 
 class GlossaryHelper:
-    VALID_KEY = "src_state"
+    REGEX_KEY = RegexSwitchHelper.REGEX_KEY
     STATE_VALID = "valid"
     STATE_REGEX = "regex"
     STATE_INVALID = "invalid"
-    # 脚本中常见的纯英文字母方括号标签应按原文匹配，而不是按正则字符类匹配。
-    # 含有连字符、反斜杠、脱字符等正则语法的字符类仍会走正则分支。
-    _LITERAL_BRACKET_IDENTIFIER_PATTERN = regex.compile(
-        r"\[[A-Za-z]+\]"
-    )
+    _warned_invalid_sources = set()
 
     @staticmethod
     def _normalize_text(value) -> str:
@@ -28,56 +26,11 @@ class GlossaryHelper:
     def _compile_source_text(source_text: str):
         return regex.compile(source_text)
 
-    @staticmethod
-    def _parse_source_text(source_text: str):
-        return regex._regex_core._parse_pattern(
-            regex._regex_core.Source(source_text),
-            regex._regex_core.Info(),
-        )
-
-    @classmethod
-    def _extract_literal_text(cls, node) -> str | None:
-        if isinstance(node, regex._regex_core.Sequence):
-            literal_parts = []
-            for item in node.items:
-                literal_text = cls._extract_literal_text(item)
-                if literal_text is None:
-                    return None
-
-                literal_parts.append(literal_text)
-
-            return "".join(literal_parts)
-
-        if isinstance(node, regex._regex_core.Character):
-            if not node.positive or node.case_flags or node.zerowidth:
-                return None
-
-            try:
-                return chr(node.value)
-            except (TypeError, ValueError):
-                return None
-
-        return None
-
-    @classmethod
-    def _get_literal_text(cls, source_text: str) -> str | None:
-        source_text = cls._normalize_text(source_text)
-        if not source_text:
-            return ""
-
-        try:
-            parsed_pattern = cls._parse_source_text(source_text)
-        except Exception:
-            return None
-
-        return cls._extract_literal_text(parsed_pattern)
-
     @classmethod
     def validate_source_text(cls, source_text: str) -> bool:
         source_text = cls._normalize_text(source_text)
         if not source_text:
             return True
-
         try:
             cls._compile_source_text(source_text)
             return True
@@ -85,99 +38,37 @@ class GlossaryHelper:
             return False
 
     @classmethod
-    @lru_cache(maxsize=_CACHE_MAXSIZE)
-    def is_regex_pattern(cls, source_text: str) -> bool:
-        source_text = cls._normalize_text(source_text)
-        if not source_text:
-            return False
-
-        if not cls.validate_source_text(source_text):
-            return False
-
-        if cls._LITERAL_BRACKET_IDENTIFIER_PATTERN.fullmatch(source_text):
-            return False
-
-        literal_text = cls._get_literal_text(source_text)
-        if literal_text is None:
-            return True
-
-        return literal_text != source_text
-
-    @classmethod
-    @lru_cache(maxsize=_CACHE_MAXSIZE)
-    def get_source_state(cls, source_text: str) -> str:
-        source_text = cls._normalize_text(source_text)
-        if not source_text:
-            return cls.STATE_VALID
-
-        if not cls.validate_source_text(source_text):
+    def get_row_state(cls, row: dict) -> str:
+        if not isinstance(row, dict):
             return cls.STATE_INVALID
-
-        if cls.is_regex_pattern(source_text):
-            return cls.STATE_REGEX
-
-        return cls.STATE_VALID
+        if not RegexSwitchHelper.is_regex_enabled(row):
+            return cls.STATE_VALID
+        if not cls.validate_source_text(row.get("src", "")):
+            return cls.STATE_INVALID
+        return cls.STATE_REGEX
 
     @classmethod
     def is_row_valid(cls, row: dict) -> bool:
-        if not isinstance(row, dict):
-            return False
-
         return cls.get_row_state(row) != cls.STATE_INVALID
 
     @classmethod
     def is_row_regex(cls, row: dict) -> bool:
-        if not isinstance(row, dict):
-            return False
-
         return cls.get_row_state(row) == cls.STATE_REGEX
 
     @classmethod
-    def get_row_state(cls, row: dict) -> str:
-        if not isinstance(row, dict):
-            return cls.STATE_INVALID
-
-        stored = row.get(cls.VALID_KEY)
-        if stored in (cls.STATE_VALID, cls.STATE_REGEX, cls.STATE_INVALID):
-            return stored
-
-        if isinstance(stored, bool):
-            if stored:
-                return cls.STATE_REGEX if cls.is_regex_pattern(row.get("src", "")) else cls.STATE_VALID
-            return cls.STATE_INVALID
-
-        return cls.get_source_state(row.get("src", ""))
-
-    @classmethod
     def normalize_row(cls, row: dict) -> dict:
-        normalized_row = dict(row) if isinstance(row, dict) else {}
-        normalized_row["src"] = cls._normalize_text(normalized_row.get("src", ""))
-        normalized_row["dst"] = cls._normalize_text(normalized_row.get("dst", ""))
-        normalized_row["info"] = cls._normalize_text(normalized_row.get("info", ""))
-        normalized_row[cls.VALID_KEY] = cls.get_source_state(normalized_row.get("src", ""))
-        return normalized_row
+        return RegexSwitchHelper.normalize_glossary_row(row)
 
     @classmethod
     def normalize_rows(cls, rows: list[dict] | None) -> list[dict]:
-        normalized_rows = []
-
-        if not isinstance(rows, list):
-            return normalized_rows
-
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-
-            normalized_rows.append(cls.normalize_row(row))
-
-        return normalized_rows
+        return RegexSwitchHelper.normalize_glossary_rows(rows)
 
     @classmethod
     @lru_cache(maxsize=_CACHE_MAXSIZE)
     def build_search_pattern(
         cls,
         source_text: str,
-        source_state: str | None = None,
+        regex_enabled: bool = False,
         case_sensitive: bool = False,
         whole_word: bool = False,
     ):
@@ -185,14 +76,8 @@ class GlossaryHelper:
         if not source_text:
             return None
 
-        if source_state is None:
-            source_state = cls.get_source_state(source_text)
-
-        if source_state == cls.STATE_INVALID:
-            return None
-
         try:
-            if source_state == cls.STATE_REGEX:
+            if regex_enabled is True:
                 return cls._compile_source_text(source_text)
 
             pattern_text = regex.escape(source_text)
@@ -209,20 +94,17 @@ class GlossaryHelper:
         cls,
         source_text: str,
         full_text: str,
-        source_state: str | None = None,
+        regex_enabled: bool = False,
         case_sensitive: bool = False,
         whole_word: bool = False,
     ) -> bool:
         pattern = cls.build_search_pattern(
             source_text,
-            source_state,
+            regex_enabled,
             case_sensitive=case_sensitive,
             whole_word=whole_word,
         )
-        if pattern is None:
-            return False
-
-        return bool(pattern.search(full_text or ""))
+        return bool(pattern and pattern.search(full_text or ""))
 
     @classmethod
     def collect_matched_rows(
@@ -242,32 +124,19 @@ class GlossaryHelper:
 
         for row in cls.normalize_rows(rows):
             src = row.get("src", "")
-            src_state = row.get(cls.VALID_KEY, cls.STATE_VALID)
+            regex_enabled = row.get(cls.REGEX_KEY) is True
             if not src:
                 continue
 
-            if src_state == cls.STATE_INVALID:
-                if not include_invalid:
-                    continue
-
-                if cls.source_matches_text(
-                    src,
-                    full_text,
-                    cls.STATE_VALID,
-                    case_sensitive=case_sensitive,
-                    whole_word=whole_word,
-                ):
-                    dedupe_key = (src, row.get("dst", ""))
-                    if dedupe_key in seen_keys:
-                        continue
-
-                    matched_rows.append(row.copy())
-                    seen_keys.add(dedupe_key)
+            if regex_enabled and not cls.validate_source_text(src):
+                if src not in cls._warned_invalid_sources:
+                    print(f"[WARNING][GlossaryHelper] 跳过无效术语正则表达式: '{src}'")
+                    cls._warned_invalid_sources.add(src)
                 continue
 
             pattern = cls.build_search_pattern(
                 src,
-                src_state,
+                regex_enabled,
                 case_sensitive=case_sensitive,
                 whole_word=whole_word,
             )
@@ -280,7 +149,6 @@ class GlossaryHelper:
                 match_text = match.group(0)
                 if not match_text or match_text in seen_texts:
                     continue
-
                 found_texts.append(match_text)
                 seen_texts.add(match_text)
 
@@ -288,7 +156,6 @@ class GlossaryHelper:
                 dedupe_key = (match_text, row.get("dst", ""))
                 if dedupe_key in seen_keys:
                     continue
-
                 new_row = row.copy()
                 new_row["src"] = match_text
                 matched_rows.append(new_row)
@@ -299,6 +166,5 @@ class GlossaryHelper:
     @classmethod
     def clear_cache(cls) -> None:
         cls._compile_source_text.cache_clear()
-        cls.is_regex_pattern.cache_clear()
-        cls.get_source_state.cache_clear()
         cls.build_search_pattern.cache_clear()
+        cls._warned_invalid_sources.clear()

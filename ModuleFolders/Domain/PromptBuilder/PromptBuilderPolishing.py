@@ -1,7 +1,6 @@
-import re
-
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Domain.PromptBuilder.GlossaryHelper import GlossaryHelper
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 from ModuleFolders.Domain.PromptBuilder.PromptBuilder import PromptBuilder
 from ModuleFolders.Domain.PromptBuilder.PromptBuilderEnum import PromptBuilderEnum
 from ModuleFolders.Domain.PromptBuilder.CharacterHelper import CharacterHelper
@@ -56,30 +55,22 @@ class PromptBuilderPolishing(Base):
         return "\n".join(glossary_prompt_lines)
 
     def build_ntl_prompt(config: TaskConfig, source_text_dict: dict) -> str:
-        exclusion_list_data = config.exclusion_list_data.copy()
+        exclusion_list_data = RegexSwitchHelper.normalize_exclusion_rows(config.exclusion_list_data)
 
         exclusion_dict = {}
         texts = list(source_text_dict.values())
 
         for element in exclusion_list_data:
-            regex = element.get("regex", "").strip()
-            marker = element.get("markers", "").strip()
             info = element.get("info", "")
+            pattern = RegexSwitchHelper.build_re_pattern(element, "markers")
+            if pattern is None:
+                continue
 
-            if regex:
-                try:
-                    pattern = re.compile(regex)
-                    for text in texts:
-                        for match in pattern.finditer(text):
-                            markers = match.group(0)
-                            if markers not in exclusion_dict:
-                                exclusion_dict[markers] = info
-                except re.error:
-                    pass
-            else:
-                found = any(marker in text for text in texts)
-                if found and marker not in exclusion_dict:
-                    exclusion_dict[marker] = info
+            for text in texts:
+                for match in pattern.finditer(text):
+                    matched_marker = match.group(0)
+                    if matched_marker and matched_marker not in exclusion_dict:
+                        exclusion_dict[matched_marker] = info
 
         if not exclusion_dict:
             return ""

@@ -89,7 +89,9 @@ class TerminologyChecker(ConfigMixin, LogMixin, Base):
                     "src": src_term,
                     "dst": dst_term,
                     "row_type": row_type,
-                    GlossaryHelper.VALID_KEY: row.get(GlossaryHelper.VALID_KEY, GlossaryHelper.STATE_VALID),
+                    GlossaryHelper.REGEX_KEY: (
+                        row.get(GlossaryHelper.REGEX_KEY) is True if row_type == "glossary" else False
+                    ),
                 })
                 seen_sources.add(src_term)
 
@@ -110,11 +112,11 @@ class TerminologyChecker(ConfigMixin, LogMixin, Base):
                 continue
 
             if term.get("row_type") == "glossary":
-                source_state = term.get(GlossaryHelper.VALID_KEY)
+                regex_enabled = term.get(GlossaryHelper.REGEX_KEY) is True
                 pattern = GlossaryHelper.build_search_pattern(
                     src_term,
-                    source_state,
-                    **({} if source_state == GlossaryHelper.STATE_REGEX else match_options),
+                    regex_enabled,
+                    **({} if regex_enabled else match_options),
                 )
                 if pattern is None:
                     continue
@@ -129,7 +131,7 @@ class TerminologyChecker(ConfigMixin, LogMixin, Base):
 
             pattern = GlossaryHelper.build_search_pattern(
                 src_term,
-                GlossaryHelper.STATE_VALID,
+                False,
                 **match_options,
             )
             if pattern is None:

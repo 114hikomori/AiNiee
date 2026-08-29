@@ -23,10 +23,11 @@ from UserInterface.Native.FileDialogProvider import get_existing_directory, get_
 
 class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
-    KEYS = ("src", "dst", "info",)
-    COLUMN_NAMES = {0: "原文",1: "译文",2: "描述",}
+    KEYS = ("src", "dst", "info", "regex",)
+    SWITCH_KEYS = ("regex",)
+    REGEX_COLUMN_INDEX = 3
+    COLUMN_NAMES = {0: "原文",1: "译文",2: "描述",3: "正则",}
     INVALID_ROW_BRUSH = QBrush(QColor(255, 0, 0, 96))
-    REGEX_ROW_BRUSH = QBrush(QColor(0, 120, 255, 72))
 
     def __init__(self, text: str, window: AppFluentWindow) -> None:
         super().__init__(parent=window)
@@ -129,6 +130,11 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         self.table.insertRow(insert_pos)
         new_item = QTableWidgetItem("")
         self.table.setItem(insert_pos, 0, new_item)
+        TableHelper.clear_switch_cell(
+            self.table,
+            insert_pos,
+            self.REGEX_COLUMN_INDEX,
+        )
         self.table.scrollToItem(new_item, QAbstractItemView.ScrollHint.PositionAtCenter)
         self.table.selectRow(insert_pos)
         self.table.editItem(self.table.item(insert_pos, 0))
@@ -153,7 +159,7 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         parent.addWidget(
             SwitchButtonCard(
                 self.tra("术语表"),
-                self.tra("通过构建术语表来引导模型翻译，可实现统一翻译、补充信息等功能\n△触发机制: 文本含有原名或者原名的正则匹配生效  ◯填写示例:  ダリヤ  |  达莉雅  |  女性的名字"),
+                self.tra("通过构建术语表来引导模型翻译，可实现统一翻译、补充信息等功能\n△匹配方式: 正则开关关闭时按原文字面匹配，开启时将原文作为正则表达式  ◯填写示例:  ダリヤ  |  达莉雅  |  女性的名字"),
                 init=init,
                 checked_changed=checked_changed,
                 action_widget=settings_button,
@@ -171,6 +177,15 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
         def item_changed(item: QTableWidgetItem) -> None:
             item.setTextAlignment(Qt.AlignCenter)
+            if item.column() == 0:
+                TableHelper.sync_switch_cell(
+                    self.table,
+                    item.row(),
+                    0,
+                    self.REGEX_COLUMN_INDEX,
+                    self._on_regex_switch_changed,
+                )
+                self._refresh_row_highlight()
 
         self.table = TableWidget(self)
         parent.addWidget(self.table)
@@ -182,6 +197,10 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         self.table.verticalHeader().hide()
         self.table.setAlternatingRowColors(True)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(
+            self.REGEX_COLUMN_INDEX,
+            QHeaderView.ResizeToContents,
+        )
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.SelectedClicked | QAbstractItemView.EditKeyPressed)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -257,6 +276,8 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         self.search_field_menu.addAction(all_action)
         self.search_field_menu.addSeparator()
         for i, key in enumerate(PromptDictionaryPage.KEYS):
+            if key in self.SWITCH_KEYS:
+                continue
             col_name = self._get_translated_column_name(i)
             action = Action(col_name)
             action.triggered.connect(lambda checked=False, index=i, name=col_name: self._set_search_field(index, name))
@@ -477,7 +498,11 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
     def _load_table_rows(self) -> list[dict]:
         return GlossaryHelper.normalize_rows(
-            TableHelper.load_from_table(self.table, PromptDictionaryPage.KEYS)
+            TableHelper.load_from_table(
+                self.table,
+                PromptDictionaryPage.KEYS,
+                self.SWITCH_KEYS,
+            )
         )
 
     def _get_translatable_rows(self, rows: list[dict] | None = None) -> list[dict]:
@@ -492,30 +517,41 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
     def _update_table_rows(self, rows: list[dict] | None) -> None:
         normalized_rows = GlossaryHelper.normalize_rows(rows)
         self.table.setRowCount(0)
-        TableHelper.update_to_table(self.table, normalized_rows, PromptDictionaryPage.KEYS)
+        previous = self.table.blockSignals(True)
+        TableHelper.update_to_table(
+            self.table,
+            normalized_rows,
+            PromptDictionaryPage.KEYS,
+            self.SWITCH_KEYS,
+            self._on_regex_switch_changed,
+        )
+        self.table.blockSignals(previous)
         self.table.resizeRowsToContents()
-        self._refresh_row_highlight(normalized_rows)
+        self._refresh_row_highlight()
 
-    def _refresh_row_highlight(self, rows: list[dict] | None) -> None:
-        state_by_src = {}
-        for row in rows or []:
-            src = str(row.get("src", "") or "").strip()
-            if not src:
-                continue
+    def _on_regex_switch_changed(self, _checked: bool) -> None:
+        self._refresh_row_highlight()
 
-            state_by_src[src] = row.get(GlossaryHelper.VALID_KEY, GlossaryHelper.STATE_VALID)
-
+    def _refresh_row_highlight(self) -> None:
+        previous = self.table.blockSignals(True)
         for row_index in range(self.table.rowCount()):
             first_item = self.table.item(row_index, 0)
-            src = first_item.text().strip() if isinstance(first_item, QTableWidgetItem) else ""
-            state = state_by_src.get(src, GlossaryHelper.STATE_VALID)
+            switch = TableHelper.get_switch_from_cell(
+                self.table,
+                row_index,
+                self.REGEX_COLUMN_INDEX,
+            )
+            row = {
+                "src": first_item.text().strip() if isinstance(first_item, QTableWidgetItem) else "",
+                "regex": switch.isChecked() if switch is not None else False,
+            }
+            state = GlossaryHelper.get_row_state(row)
             self._set_row_highlight(row_index, state)
+        self.table.blockSignals(previous)
 
     def _set_row_highlight(self, row_index: int, state: str) -> None:
         if state == GlossaryHelper.STATE_INVALID:
             brush = self.INVALID_ROW_BRUSH
-        elif state == GlossaryHelper.STATE_REGEX:
-            brush = self.REGEX_ROW_BRUSH
         else:
             brush = QBrush()
 
@@ -558,11 +594,13 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         path, _ = get_open_file_name(self, self.tra("选择文件"), "", "json 文件 (*.json);;xlsx 文件 (*.xlsx)")
         if not isinstance(path, str) or path == "":
             return
-        data = TableHelper.load_from_file(path, PromptDictionaryPage.KEYS)
+        data = GlossaryHelper.normalize_rows(
+            TableHelper.load_from_file(path, PromptDictionaryPage.KEYS, self.SWITCH_KEYS)
+        )
         config = self.load_config()
 
         # 去重逻辑
-        current_data = TableHelper.load_from_table(self.table, PromptDictionaryPage.KEYS)
+        current_data = self._load_table_rows()
         current_src_set = {item['src'] for item in current_data if item.get('src')} # 处理潜在的空 src
         new_data_filtered = [item for item in data if item.get('src') and item['src'] not in current_src_set] # 确保导入的项目具有 src
 
@@ -590,7 +628,7 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
     # 导出方法
     def export_data(self) -> None:
-        data = TableHelper.load_from_table(self.table, PromptDictionaryPage.KEYS)
+        data = self._load_table_rows()
         if not data:
             self.warning_toast("", self.tra("表格中没有数据可导出"))
             return
@@ -649,7 +687,7 @@ class PromptDictionaryPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
                 return
 
             config = self.load_config()
-            current_data = TableHelper.load_from_table(self.table, PromptDictionaryPage.KEYS)
+            current_data = self._load_table_rows()
             current_src_set = {item['src'] for item in current_data if item.get('src')}
             new_data_filtered = [item for item in data if item.get('src') and item['src'] not in current_src_set]
 

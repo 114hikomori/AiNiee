@@ -1489,6 +1489,7 @@ class AnalysisPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
                     f"性别: {self._get_character_category_value(row.get('gender'), fallback=self.CHARACTER_OTHER)}",
                     f"备注: {str(row.get('note', '') or '').strip()}",
                 ),
+                "regex": False,
             }
 
         if view_name == self.VIEW_TERMS:
@@ -1502,6 +1503,7 @@ class AnalysisPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
                     f"分类: {self._get_term_category_value(row.get('category_path'), fallback='Other')}",
                     f"备注: {str(row.get('note', '') or '').strip()}",
                 ),
+                "regex": False,
             }
 
         marker = self._normalize_row_key(row.get("marker"))
@@ -1513,7 +1515,7 @@ class AnalysisPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
                 f"分类: {self._get_non_translate_category_value(row.get('category'), fallback='Other')}",
                 f"备注: {str(row.get('note', '') or '').strip()}",
             ),
-            "regex": "",
+            "regex": False,
         }
 
     def _append_public_table_rows(self, config: dict, view_name: str, public_rows: list[dict]) -> int:

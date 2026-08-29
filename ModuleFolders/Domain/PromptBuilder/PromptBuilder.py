@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Domain.PromptBuilder.GlossaryHelper import GlossaryHelper
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 from ModuleFolders.Service.TaskExecutor import TranslatorUtil
 from ModuleFolders.Config.FilePathConfig import prompt_path
 from ModuleFolders.Infrastructure.TaskConfig.TaskConfig import TaskConfig
@@ -492,38 +493,23 @@ class PromptBuilder(Base):
     def build_ntl_prompt(config: TaskConfig, source_text_dict) -> str:
 
         # 获取禁翻表内容
-        exclusion_list_data = config.exclusion_list_data.copy()
+        exclusion_list_data = RegexSwitchHelper.normalize_exclusion_rows(config.exclusion_list_data)
 
 
         exclusion_dict = {}  # 用字典存储并自动去重
         texts = list(source_text_dict.values())
 
-        # 处理正则匹配
         for element in exclusion_list_data:
-            regex = element.get("regex", "").strip()
-            marker = element.get("markers", "").strip()
             info = element.get("info", "")
+            pattern = RegexSwitchHelper.build_re_pattern(element, "markers")
+            if pattern is None:
+                continue
 
-            # 检查是否写正则，如果写了，只处理正则
-            if regex:
-                # 避免错误正则，导致崩溃
-                try:
-                    # 编译正则表达式字符串为模式对象
-                    pattern = re.compile(regex)
-                    # 寻找文本中所有符合正则的文本内容
-                    for text in texts:
-                        for match in pattern.finditer(text):
-                            markers = match.group(0)
-                            # 避免重复添加
-                            if markers not in exclusion_dict:
-                                exclusion_dict[markers] = info
-                except re.error:
-                    pass
-            # 没写正则，只处理标记符
-            else:
-                found = any(marker in text for text in texts)
-                if found and marker not in exclusion_dict:  # 避免重复添加
-                    exclusion_dict[marker] = info
+            for text in texts:
+                for match in pattern.finditer(text):
+                    matched_marker = match.group(0)
+                    if matched_marker and matched_marker not in exclusion_dict:
+                        exclusion_dict[matched_marker] = info
 
         # 检查内容是否为空
         if not exclusion_dict :

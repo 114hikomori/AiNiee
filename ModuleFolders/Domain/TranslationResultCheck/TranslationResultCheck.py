@@ -4,6 +4,7 @@ import re
 import time
 
 from ModuleFolders.Config.FilePathConfig import check_regex_path
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 from ModuleFolders.Service.Cache.CacheItem import TranslationStatus
 from ModuleFolders.Service.Cache.CacheProject import CacheProject
 
@@ -32,16 +33,10 @@ class TranslationResultCheck:
         # 合并禁翻表数据
         if exclusion_list_data: # 检查 exclusion_list_data 是否存在且非空
             exclusion_patterns = []
-            for item in exclusion_list_data:
-                if isinstance(item, dict): # 确保 item 是字典
-                    if regex := item.get("regex"):
-                        try:
-                            re.compile(regex) # 尝试编译，验证正则有效性
-                            exclusion_patterns.append(regex)
-                        except re.error as e:
-                            print(f"[WARNING][TranslationResultCheck] 禁翻表中的无效正则表达式: '{regex}', 错误: {e}")
-                    elif markers := item.get("markers"): # 使用 markers 字段
-                        exclusion_patterns.append(re.escape(markers)) # 转义 markers 并添加
+            for item in RegexSwitchHelper.normalize_exclusion_rows(exclusion_list_data):
+                pattern = RegexSwitchHelper.build_re_pattern(item, "markers")
+                if pattern is not None:
+                    exclusion_patterns.append(pattern.pattern)
             patterns.extend(exclusion_patterns)
         return patterns
 
@@ -333,25 +328,21 @@ class TranslationResultCheck:
         """检查禁翻表功能, 返回错误信息列表"""
         errors = []
         # exclusion_list_data 已在调用前检查过非空
-        for item in exclusion_list_data:
+        for item in RegexSwitchHelper.normalize_exclusion_rows(exclusion_list_data):
             pattern_to_check = None
             original_marker = None # 用于错误信息展示
 
             if isinstance(item, dict): # 确保 item 是字典
-                regex = item.get("regex")
                 markers = item.get("markers")
-
-                if regex:
-                    try:
-                        re.compile(regex) # 再次验证（虽然 prepare_regex_patterns 可能已做）
-                        pattern_to_check = regex
-                        original_marker = f"正则 '{regex}'"
-                    except re.error:
-                        # 忽略无效正则，或记录一个警告
-                        continue # 跳过这个无效项
-                elif markers:
-                    pattern_to_check = re.escape(markers)
-                    original_marker = f"标记符 '{markers}'"
+                pattern = RegexSwitchHelper.build_re_pattern(item, "markers")
+                if pattern is None:
+                    continue
+                pattern_to_check = pattern.pattern
+                original_marker = (
+                    f"正则 '{markers}'"
+                    if RegexSwitchHelper.is_regex_enabled(item)
+                    else f"标记符 '{markers}'"
+                )
 
             if pattern_to_check and original_marker:
                 try:

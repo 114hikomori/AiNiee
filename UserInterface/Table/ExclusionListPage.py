@@ -5,12 +5,14 @@ from qfluentwidgets import (Action, FluentIcon, MessageBox, TableWidget, RoundMe
                             LineEdit, DropDownPushButton, ToolButton, TransparentToolButton, BodyLabel)
 
 from PyQt5.QtCore import QEvent, Qt, QPoint, QTimer
+from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import (QFrame, QHeaderView, QLayout, QVBoxLayout,
                              QTableWidgetItem, QHBoxLayout, QWidget,QAbstractItemView)
 
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Config.Config import ConfigMixin
 from ModuleFolders.Log.Log import LogMixin
+from ModuleFolders.Domain.RegexSwitchHelper import RegexSwitchHelper
 from UserInterface.Widget.Toast import ToastMixin
 from UserInterface.Table.TableHelper.TableHelper import TableHelper
 from UserInterface.Widget.SwitchButtonCard import SwitchButtonCard
@@ -20,7 +22,10 @@ from UserInterface.Native.FileDialogProvider import get_open_file_name, get_save
 class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
     KEYS = ("markers", "info", "regex",)
+    SWITCH_KEYS = ("regex",)
+    REGEX_COLUMN_INDEX = 2
     COLUMN_NAMES = {0: "标记符",1: "备注",2: "正则",}
+    INVALID_ROW_BRUSH = QBrush(QColor(255, 0, 0, 96))
 
     def __init__(self, text: str, window: AppFluentWindow) -> None:
         super().__init__(parent=window)
@@ -65,7 +70,7 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
     def update_table(self) -> None:
         config = self.load_config()
-        TableHelper.update_to_table(self.table, config["exclusion_list_data"], ExclusionListPage.KEYS)
+        self._update_table_rows(config["exclusion_list_data"])
         self._reset_search() # 重置搜索状态
         self._reset_sort_indicator() # 重置排序指示器
 
@@ -119,6 +124,11 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         # 滚动到新行
         new_item = QTableWidgetItem("") # 创建一个虚拟项以滚动到该位置
         self.table.setItem(insert_pos, 0, new_item) # 添加到第一列
+        TableHelper.clear_switch_cell(
+            self.table,
+            insert_pos,
+            self.REGEX_COLUMN_INDEX,
+        )
         self.table.scrollToItem(new_item, QAbstractItemView.ScrollHint.PositionAtCenter)
         self.table.selectRow(insert_pos) # 选择新行
         self.table.editItem(self.table.item(insert_pos, 0)) # 开始编辑第一个单元格
@@ -141,7 +151,7 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         parent.addWidget(
             SwitchButtonCard(
                 self.tra("禁翻表"),
-                self.tra("通过构建禁翻表来引导模型，禁止翻译文本中的特殊标记符，占位符，代码段等内容\n△触发机制: 文本含有标记符，或者正则表达式匹配生效  ◯填写示例:  //F[N1]  |  游戏文本标记符号  |  //[A-Z]\\[.*?\\]"),
+                self.tra("通过构建禁翻表来引导模型，禁止翻译文本中的特殊标记符，占位符，代码段等内容\n△匹配方式: 正则开关关闭时按标记符字面匹配，开启时将标记符作为正则表达式  ◯填写示例:  //F[N1]  |  游戏文本标记符号"),
                 init=init,
                 checked_changed=checked_changed,
             )
@@ -156,6 +166,15 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
         def item_changed(item: QTableWidgetItem) -> None:
             item.setTextAlignment(Qt.AlignCenter)
+            if item.column() == 0:
+                TableHelper.sync_switch_cell(
+                    self.table,
+                    item.row(),
+                    0,
+                    self.REGEX_COLUMN_INDEX,
+                    self._on_regex_switch_changed,
+                )
+                self._refresh_row_highlight()
             # 编辑单元格后，不一定需要立即重排序或重置搜索
             # self._reset_search()
             # self.search_input.clear()
@@ -173,6 +192,10 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         self.table.verticalHeader().hide()
         self.table.setAlternatingRowColors(True)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(
+            self.REGEX_COLUMN_INDEX,
+            QHeaderView.ResizeToContents,
+        )
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.SelectedClicked | QAbstractItemView.EditKeyPressed)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -214,7 +237,7 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
             self._sort_order = Qt.AscendingOrder
 
         # 2. 获取当前表格数据
-        data = TableHelper.load_from_table(self.table, ExclusionListPage.KEYS)
+        data = self._load_table_rows()
 
         # 3. 定义排序键函数
         try:
@@ -238,7 +261,7 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         # 5. 清空并重新填充表格
         self.table.setUpdatesEnabled(False) # 优化性能
         self.table.setRowCount(0) # 清空表格
-        TableHelper.update_to_table(self.table, data, ExclusionListPage.KEYS)
+        self._update_table_rows(data)
         self.table.resizeRowsToContents() # 重新调整行高
         self.table.setUpdatesEnabled(True)
 
@@ -279,6 +302,8 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
         # 特定字段的Action
         for i, key in enumerate(ExclusionListPage.KEYS):
+            if key in self.SWITCH_KEYS:
+                continue
             col_name = self._get_translated_column_name(i)
             action = Action(col_name)
             # 使用带有默认参数捕获的lambda表达式以传递正确的索引和名称
@@ -464,9 +489,47 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         self._update_search_ui() # 更新标签和按钮状态
 
     # 保存方法
+    def _load_table_rows(self) -> list[dict]:
+        return RegexSwitchHelper.normalize_exclusion_rows(
+            TableHelper.load_from_table(self.table, self.KEYS, self.SWITCH_KEYS)
+        )
+
+    def _update_table_rows(self, rows: list[dict] | None) -> None:
+        normalized_rows = RegexSwitchHelper.normalize_exclusion_rows(rows)
+        previous = self.table.blockSignals(True)
+        TableHelper.update_to_table(
+            self.table,
+            normalized_rows,
+            self.KEYS,
+            self.SWITCH_KEYS,
+            self._on_regex_switch_changed,
+        )
+        self.table.blockSignals(previous)
+        self.table.resizeRowsToContents()
+        self._refresh_row_highlight()
+
+    def _on_regex_switch_changed(self, _checked: bool) -> None:
+        self._refresh_row_highlight()
+
+    def _refresh_row_highlight(self) -> None:
+        previous = self.table.blockSignals(True)
+        for row_index in range(self.table.rowCount()):
+            first_item = self.table.item(row_index, 0)
+            switch = TableHelper.get_switch_from_cell(self.table, row_index, self.REGEX_COLUMN_INDEX)
+            row = {
+                "markers": first_item.text().strip() if isinstance(first_item, QTableWidgetItem) else "",
+                "regex": switch.isChecked() if switch is not None else False,
+            }
+            brush = self.INVALID_ROW_BRUSH if not RegexSwitchHelper.is_valid_re_pattern(row, "markers") else QBrush()
+            for column_index in range(self.table.columnCount()):
+                item = self.table.item(row_index, column_index)
+                if isinstance(item, QTableWidgetItem):
+                    item.setBackground(brush)
+        self.table.blockSignals(previous)
+
     def save_data(self) -> None:
         config = self.load_config()
-        config["exclusion_list_data"] = TableHelper.load_from_table(self.table, ExclusionListPage.KEYS)
+        config["exclusion_list_data"] = self._load_table_rows()
         self.save_config(config)
         self.success_toast("", self.tra("数据已保存") + " ... ")
 
@@ -484,7 +547,7 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         config = self.load_config()
         config["exclusion_list_data"] = copy.deepcopy(self.default.get("exclusion_list_data", []))
         self.save_config(config)
-        TableHelper.update_to_table(self.table, config.get("exclusion_list_data"), ExclusionListPage.KEYS)
+        self._update_table_rows(config.get("exclusion_list_data"))
         self.table.resizeRowsToContents()
         self._reset_search() # 重置后重置搜索
         self._reset_sort_indicator() # 重置后重置排序
@@ -495,11 +558,13 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         path, _ = get_open_file_name(self, self.tra("选择文件"), "", "json 文件 (*.json);;xlsx 文件 (*.xlsx)")
         if not isinstance(path, str) or path == "":
             return
-        data = TableHelper.load_from_file(path, ExclusionListPage.KEYS)
+        data = RegexSwitchHelper.normalize_exclusion_rows(
+            TableHelper.load_from_file(path, self.KEYS, self.SWITCH_KEYS)
+        )
         config = self.load_config()
 
         # 去重逻辑
-        current_data = TableHelper.load_from_table(self.table, ExclusionListPage.KEYS)
+        current_data = self._load_table_rows()
         current_src_set = {item['markers'] for item in current_data if item.get('markers')} # 处理潜在的空 markers
         new_data_filtered = [item for item in data if item.get('markers') and item['markers'] not in current_src_set] # 确保导入的项目具有 markers
 
@@ -516,11 +581,11 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
         config["exclusion_list_data"] = combined_data # 直接更新配置
 
         # 在再次从表格保存配置*之前*更新表格
-        TableHelper.update_to_table(self.table, config["exclusion_list_data"], ExclusionListPage.KEYS)
+        self._update_table_rows(config["exclusion_list_data"])
         self.table.resizeRowsToContents() # 导入后调整行高
 
         # 现在将可能已修改的表格状态保存回配置
-        config["exclusion_list_data"] = TableHelper.load_from_table(self.table, ExclusionListPage.KEYS)
+        config["exclusion_list_data"] = self._load_table_rows()
         self.save_config(config)
         self._reset_search() # 导入后重置搜索
         self._reset_sort_indicator() # 导入后重置排序
@@ -528,7 +593,7 @@ class ExclusionListPage(QFrame, ConfigMixin, LogMixin, ToastMixin, Base):
 
     # 导出方法
     def export_data(self) -> None:
-        data = TableHelper.load_from_table(self.table, ExclusionListPage.KEYS)
+        data = self._load_table_rows()
         if not data:
             self.warning_toast("", self.tra("表格中没有数据可导出"))
             return
