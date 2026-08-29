@@ -6,6 +6,7 @@ import rapidjson as json
 
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Config.Config import ConfigMixin
+from ModuleFolders.Domain.PromptBuilder.PromptBuilderExtraction import PromptBuilderExtraction
 from ModuleFolders.Log.Log import LogMixin
 from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester
 from ModuleFolders.Infrastructure.RequestLimiter.RequestLimiter import RequestLimiter
@@ -263,26 +264,7 @@ class AnalysisTask(ConfigMixin, LogMixin, Base):
 
     def _build_first_stage_prompt(self, source_text: str) -> tuple[str, list[dict]]:
             """第一阶段：独立文本提取（优化版提示词）"""
-            system_prompt = (
-                "你是一个专业的游戏与本地化文本分析专家。你的唯一任务是从给定的文本中提取出：角色名、专有名词（术语）以及不需要翻译的代码/标记。\n"
-                "【严格执行以下规则】\n"
-                "1. 原样提取：提取的 `source` 必须与原文一字不差，绝对不要修改大小写或标点。\n"
-                "2. 拒绝脑补：只提取文本中实际出现的实体，不要联想或创造。\n"
-                "3. 宁缺毋滥：对于普通词汇（如“苹果”、“跑”、“明天”），不要提取。如果没有值得提取的内容，返回空列表。\n"
-                "4. 分类规范：\n"
-                "   - characters(角色): 文本中出现的具体人物、怪物、神明等名字。gender 建议分类: 男性/女性/其他。\n"
-                "   - terms(术语): 身份称谓、地名、组织、物品名、技能名、种族名、独特概念等。category_path 建议分类: 身份/物品/组织/地名/技能/种族/其他。\n"
-                "   - non_translate(不翻译项): 必须保留的机器代码，如 HTML标签(<b>)、占位符(%s)、变量({{name}})。category 建议分类: 标签/变量/占位符/标记符/转义控制符/资源标识/数值公式/其他。\n"
-                "【输出格式】\n"
-                "必须输出合法的 JSON 代码块，严格遵守以下结构：\n"
-                "```json\n"
-                "{\n"
-                "  \"characters\": [{\"source\": \"原文\", \"recommended_translation\": \"推荐译名\", \"gender\": \"\", \"note\": \"\"}],\n"
-                "  \"terms\": [{\"source\": \"原文\", \"recommended_translation\": \"推荐译名\", \"category_path\": \"\", \"note\": \"\"}],\n"
-                "  \"non_translate\": [{\"marker\": \"代码或标记\", \"category\": \"\", \"note\": \"\"}]\n"
-                "}\n"
-                "```"
-            )
+            system_prompt = PromptBuilderExtraction.build_system(self.config, PromptBuilderExtraction.BASIC)
             
             # 优化 Few-Shot：包含更丰富的混合场景，注意 {{}} 是转义 Python 的 f-string 占位符
             fake_user = (
@@ -440,24 +422,7 @@ class AnalysisTask(ConfigMixin, LogMixin, Base):
 
     def _build_second_stage_prompt(self, batch: list) -> tuple[str, list[dict]]:
         """第二阶段：候选归并与 AI 裁决（优化版提示词）"""
-        system_prompt = (
-            "你是一个本地化术语库规范化专家。你将收到一组经初步提取的“候选词组（Group）”。\n"
-            "有时候相同的词汇会被误判为不同的类型（如既被识别为角色，又被识别为术语）。\n"
-            "你的唯一任务是：综合判定每个 Group，裁决它最终属于“角色(characters)”还是“术语(terms)”，并提炼出一个最准确的结果。\n"
-            "【严格执行以下规则】\n"
-            "1. 唯一归属：同一个词不能既是角色又是术语，必须二选一。\n"
-            "2. 主键保留：输出的 `source` 必须严格使用传入的 `主source`，绝不能随意篡改。\n"
-            "3. 丢弃无价值词汇：如果某个 Group 里的词汇看起来是普通词语（如“今天”、“然后”），请直接忽略，不要输出它。\n"
-            "4. 信息整合：如果推荐译名或备注有多个参考，请合并为你认为最合理的版本。\n"
-            "【输出格式】\n"
-            "必须输出合法的 JSON 代码块，严格遵守以下结构：\n"
-            "```json\n"
-            "{\n"
-            "  \"characters\": [{\"source\": \"主source\", \"recommended_translation\": \"推荐译名\", \"gender\": \"分类属性\", \"note\": \"整合后的备注\"}],\n"
-            "  \"terms\": [{\"source\": \"主source\", \"recommended_translation\": \"推荐译名\", \"category_path\": \"分类属性\", \"note\": \"整合后的备注\"}]\n"
-            "}\n"
-            "```"
-        )
+        system_prompt = PromptBuilderExtraction.build_system(self.config, PromptBuilderExtraction.JUDGMENT)
         
         # 优化 Few-Shot：展示如何解决类型冲突和合并备注
         sample_group = [

@@ -11,3 +11,6 @@ class PromptBuilderEnum(Base):
     POLISH_COMMON = 10001
 
     FORMAT_COMMON = 20001
+
+    EXTRACT_COMMON = 30001
+    EXTRACT_JUDGMENT = 30002

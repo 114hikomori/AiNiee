@@ -19,12 +19,14 @@ from qfluentwidgets import (
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Config.Config import ConfigMixin
 from ModuleFolders.Config.FilePathConfig import resource_path
+from ModuleFolders.Domain.PromptBuilder.PromptBuilderExtraction import PromptBuilderExtraction
 from ModuleFolders.Infrastructure.Platform.PlatformPaths import is_macos
 from ModuleFolders.Log.Log import LogMixin
 from UserInterface.BaseNavigationItem import BaseNavigationItem
 from UserInterface.EditView.EditViewPage import EditViewPage
 from UserInterface.Native.MacOSUI import about_message, app_menu_title, command_shortcut
 from UserInterface.Platform.PlatformPage import PlatformPage
+from UserInterface.PromptSettings.ExtractionSettings.ExtractionPromptPage import ExtractionPromptPage
 from UserInterface.PromptSettings.PolishingSettings.PolishingSystemPromptPage import PolishingSystemPromptPage
 from UserInterface.LogView.LogViewPage import LogViewPage
 from UserInterface.Settings.AdvancedSettingsPage import AdvancedSettingsPage
@@ -308,6 +310,33 @@ class AppFluentWindow(FluentWindow, ConfigMixin, LogMixin, ToastMixin, Base):
 
     # 添加提示词设置
     def add_prompt_setting_pages(self) -> None:
+        # 提取提示词
+        self.extraction_prompt_navigation = BaseNavigationItem("extraction_prompt_navigation", self)
+        self.addSubInterface(
+            self.extraction_prompt_navigation,
+            FluentIcon.SEARCH,
+            self.tra("提取提示词"),
+            NavigationItemPosition.SCROLL,
+        )
+        self.extraction_system_prompt_page = ExtractionPromptPage(
+            "extraction_system_prompt_page", self, PromptBuilderExtraction.BASIC
+        )
+        self.addSubInterface(
+            self.extraction_system_prompt_page,
+            FluentIcon.LABEL,
+            self.tra("基础提示"),
+            parent=self.extraction_prompt_navigation,
+        )
+        self.extraction_judgment_prompt_page = ExtractionPromptPage(
+            "extraction_judgment_prompt_page", self, PromptBuilderExtraction.JUDGMENT
+        )
+        self.addSubInterface(
+            self.extraction_judgment_prompt_page,
+            FluentIcon.LABEL,
+            self.tra("裁定提示"),
+            parent=self.extraction_prompt_navigation,
+        )
+
         self.prompt_optimization_navigation_item = BaseNavigationItem("prompt_optimization_navigation_item", self)
         self.addSubInterface(
             self.prompt_optimization_navigation_item,
