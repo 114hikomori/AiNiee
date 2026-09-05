@@ -111,3 +111,21 @@ English. Commit and update this file after each important, verified unit of work
   English-fallbacks into Thai); (b) sweep hardcoded Chinese that lives in f-strings / variables /
   data-structure dicts+lists (e.g. PlatformPage descriptions, combobox item lists), which needs
   per-file judgment on user-facing vs intentional (e.g. native language names must stay untranslated).
+
+## 2026-09-05 — localization: Thai for key screens (main window/nav + startup)
+- User decision: generate Thai for **key screens only** for now; **skip** the broad hardcoded
+  f-string/dict sweep. Thai for the rest stays on the English-fallback until later.
+- Done:
+  - Added a `ไทย` value to all 47 AppFluentWindow.json entries (nav/sidebar, always visible) and all
+    43 StartupPage.json entries (landing screen), translated from the existing complete English.
+  - Discovered `load_translations` merges all files flat with last-file-wins, so 9 of these keys are
+    duplicated in other files (EditView/TableSettings/ApplicationSettings) and were being shadowed by
+    the Thai-less copy. Fixed by applying the same 90-key Thai map **globally** (only touches those
+    keys wherever they appear): +3 ApplicationSettings, +5 EditView, +4 TableSettings.
+  - Verified via the real loader in ไทย mode: previously-shadowed keys (开始翻译, 术语表, 禁翻表,
+    应用设置, 检查更新, 译前/译后替换, 文件/目录排除规则, 错误) now all render Thai; multi-line
+    help strings keep a real newline like the English.
+- Deviated from expected behavior: none.
+- Blocked / open question: none.
+- Next: Thai for EditView.json (core translation screen, ~252 keys) as its own unit, then
+  ApplicationSettings.json + APIManagement.json (setup screens).
