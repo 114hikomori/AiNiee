@@ -10,6 +10,10 @@
 /ProjectCache/
 /Logs/
 /Resource/config.json
+# Exported-exe settings & runtime data. docs/ainiee_profile.json holds the user's real
+# api_settings/platforms API keys; docs/ProjectCache/ holds large per-project translation caches.
+# Never commit, never paste its contents into a commit/PR/chat. Separate from Resource/config.json.
+/docs/
 .venv
 dist/
 build/
