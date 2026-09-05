@@ -35,3 +35,21 @@ English. Commit and update this file after each important, verified unit of work
 - Next: (1) make `tra()` fall back to English before raw Chinese so missing keys never leak Chinese
   in en/th mode; (2) add "ไทย" to the language selector; (3) fill the 106 missing keys; (4) bulk-add
   Thai to the 848 entries; (5) sweep the hardcoded-Chinese files. Commit each when verified.
+
+## 2026-09-05 — localization: English-fallback in tra() + Thai language option
+- Done:
+  - `ConfigMixin.tra()` (ModuleFolders/Config/Config.py) now falls back to the entry's **English**
+    value when the selected language's value is missing, before returning the raw Chinese source.
+    Verified by importing the real class (shimmed `rapidjson`→stdlib json) and exercising three
+    cases: Thai-mode with a missing-Thai entry returns English (not Chinese); Chinese mode unchanged;
+    a key absent from the dict still returns Chinese (that set is the 106 missing keys, next task).
+  - Added `"ไทย"` to the interface-language selector list (UserInterface/Settings/AppSettingsPage.py:314).
+    No other code enumerates the language set; the combo stores the selected text directly into
+    `interface_language_setting`, so selecting ไทย now drives `tra()` lookups on a "ไทย" key.
+  - Both changed files pass `python -m py_compile`.
+- Fork divergence: this is the first functional change vs upstream — upstream has no Thai and no
+  English-fallback (missing keys leak Chinese in any non-Chinese UI).
+- Deviated from expected behavior: none.
+- Blocked / open question: none.
+- Next: add the 106 `tra()` keys that are absent from the Localization JSONs (with English + ไทย),
+  then bulk-add ไทย values to the 848 existing entries.

@@ -311,7 +311,7 @@ class AppSettingsPage(QWidget, ConfigMixin, LogMixin, ToastMixin, Base):
             ComboBoxCard(
                 self.tra("界面语言设置"),
                 self.tra("应用界面将按照所选语言进行显示(将在应用重启后生效)"),
-                ["简中", "繁中", "English", "日本語"],
+                ["简中", "繁中", "English", "日本語", "ไทย"],
                 init=init,
                 current_text_changed=current_text_changed,
             )

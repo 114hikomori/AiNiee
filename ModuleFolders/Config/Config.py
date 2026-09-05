@@ -28,6 +28,11 @@ class ConfigMixin:
             translation_text = translation.get(ConfigMixin.current_interface_language)
             if translation_text:
                 return translation_text
+            # Fall back to English before the raw source string, so a missing
+            # translation never leaks Chinese into a non-Chinese (English/Thai) UI.
+            english_text = translation.get("English")
+            if english_text:
+                return english_text
         return text
 
     @classmethod
