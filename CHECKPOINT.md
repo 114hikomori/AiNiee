@@ -53,3 +53,25 @@ English. Commit and update this file after each important, verified unit of work
 - Blocked / open question: none.
 - Next: add the 106 `tra()` keys that are absent from the Localization JSONs (with English + ไทย),
   then bulk-add ไทย values to the 848 existing entries.
+
+## 2026-09-05 — localization: added the missing tra() keys (Supplement.json)
+- Done:
+  - Re-extracted the truly-missing `tra()` keys with Python `ast` (folds adjacent string literals +
+    escapes into the exact runtime value) instead of regex: **94** keys were absent from the
+    Localization JSONs (the earlier regex count of 106 over-counted multi-line literals).
+  - Added all 94 as `Resource/Localization/Supplement.json` (flat-merged by `load_translations`, so a
+    new file is functionally identical to editing existing ones and keeps the additions isolated).
+    Each entry has 简中/繁中/English/日本語/ไทย. English + Thai are the fork's target; 繁中/日本語
+    filled for schema parity with the other 848.
+  - Verified by reloading through the real `ConfigMixin.load_translations` and re-running the ast
+    missing-check: **0 remaining missing tra() keys** (637 distinct literals all covered). Spot-checked
+    rendering: ไทย 确定→ตกลง, format-string key `表格已按 '{}' {}排序`→`ตารางเรียงตาม '{}' {}`
+    (placeholders preserved), English and 简中 modes correct.
+  - Effect: the "Chinese still shows after switching to English/Thai" bug is now fixed for **every**
+    `tra()`-based UI string. Remaining Chinese leaks are only the hardcoded literals that bypass
+    `tra()` (next major task) and Thai completeness on the pre-existing 848 entries (currently covered
+    by the English fallback added earlier).
+- Deviated from expected behavior: none.
+- Blocked / open question: none.
+- Next: bulk-add ไทย to the 848 pre-existing entries (so Thai mode shows Thai, not English fallback),
+  then sweep the ~291 hardcoded Chinese literals to wrap user-facing ones in `tra()`.
