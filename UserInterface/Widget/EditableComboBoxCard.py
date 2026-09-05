@@ -8,6 +8,8 @@ from qfluentwidgets import (
     TransparentDropDownToolButton
 )
 
+from ModuleFolders.Config.Config import ConfigMixin
+
 
 class EditableComboBoxCard(CardWidget):
     # 当用户选择“从接口获取模型”时发出，交由上层页面处理网络请求
@@ -46,11 +48,11 @@ class EditableComboBoxCard(CardWidget):
         self.edit_button = TransparentDropDownToolButton(FluentIcon.EDIT, self)
         menu = RoundMenu(parent=self)
         # 1) 手动编辑列表
-        action_edit = Action(self.tra("编辑模型选项")) if hasattr(self, 'tra') else Action("编辑模型选项")
+        action_edit = Action(ConfigMixin.tra("编辑模型选项"))
         action_edit.triggered.connect(self._show_edit_items_popup)
         menu.addAction(action_edit)
         # 2) 从接口获取模型
-        action_fetch = Action(self.tra("获取模型列表")) if hasattr(self, 'tra') else Action("获取模型列表")
+        action_fetch = Action(ConfigMixin.tra("获取模型列表"))
         action_fetch.triggered.connect(self._emit_fetch_models_requested)
         menu.addAction(action_fetch)
 
@@ -113,7 +115,7 @@ class EditItemsMessageBox(MessageBoxBase):
 
     def __init__(self, items: list[str], parent=None):
         super().__init__(parent)
-        self.titleLabel = SubtitleLabel('编辑选项', self)
+        self.titleLabel = SubtitleLabel(ConfigMixin.tra('编辑选项'), self)
         self.viewLayout.addWidget(self.titleLabel)
 
         # 创建垂直布局用于存放所有选项行
@@ -127,7 +129,7 @@ class EditItemsMessageBox(MessageBoxBase):
             self._add_row(item)
 
         # 添加“新增”按钮
-        self.add_button = PushButton('添加', self)
+        self.add_button = PushButton(ConfigMixin.tra('添加'), self)
         self.add_button.clicked.connect(self._add_new_row)
         self.viewLayout.addWidget(self.add_button)
 

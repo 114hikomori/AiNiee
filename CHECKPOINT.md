@@ -90,3 +90,24 @@ English. Commit and update this file after each important, verified unit of work
 - Next: (a) bulk-add ไทย to the 848 pre-existing entries so Thai mode stops relying on the English
   fallback; (b) sweep the genuinely hardcoded Chinese literals (never call tra()) — the only remaining
   source of Chinese in an English/Thai UI.
+
+## 2026-09-05 — localization: wrap genuinely-hardcoded UI strings (6 spots)
+- Done:
+  - Built an ast detector for CJK literals passed directly to display calls (setText/labels/buttons/
+    menus) and NOT wrapped in tra(). First pass over-flagged because `self.info`/`self.error` are
+    LogMixin **logger** calls (Log.py), not UI toasts (the UI ones are `*_toast` in Toast.py) — so
+    ProofreadingPage/StartupPage/BottomCommandBar "hits" are log lines and were left untranslated on
+    purpose (logs stay in the source language).
+  - Fixed the 6 real UI leaks: LineEditMessageBox (确定/取消 buttons) and EditableComboBoxCard
+    (编辑选项 title, 添加 button, and the 编辑模型选项/获取模型列表 menu actions that had a
+    `hasattr(self,'tra')` dance silently falling back to Chinese because the class isn't a ConfigMixin).
+    Used `ConfigMixin.tra(...)` (it's a classmethod, so reachable from non-mixin widgets). Added the
+    one new key 编辑选项 to Supplement.json.
+  - Verified: py_compile both files; reloaded dict (882 keys) and confirmed all 6 render in English
+    and Thai (or English-fallback where the pre-existing entry still lacks Thai, e.g. 取消/添加).
+- Deviated from expected behavior: intentionally did NOT translate logger (self.info/error) strings.
+- Blocked / open question: none.
+- Next: the two remaining large efforts — (a) bulk-add ไทย to the ~848 pre-existing entries (turns
+  English-fallbacks into Thai); (b) sweep hardcoded Chinese that lives in f-strings / variables /
+  data-structure dicts+lists (e.g. PlatformPage descriptions, combobox item lists), which needs
+  per-file judgment on user-facing vs intentional (e.g. native language names must stay untranslated).

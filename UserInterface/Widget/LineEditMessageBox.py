@@ -2,6 +2,8 @@ from qfluentwidgets import LineEdit
 from qfluentwidgets import MessageBoxBase
 from qfluentwidgets import StrongBodyLabel
 
+from ModuleFolders.Config.Config import ConfigMixin
+
 class LineEditMessageBox(MessageBoxBase):
 
     def __init__(self, window, title:str, message_box_close:callable = None, default_text:str = ""):
@@ -11,8 +13,8 @@ class LineEditMessageBox(MessageBoxBase):
         self.message_box_close = message_box_close
 
         # 设置框体
-        self.yesButton.setText("确定")
-        self.cancelButton.setText("取消")
+        self.yesButton.setText(ConfigMixin.tra("确定"))
+        self.cancelButton.setText(ConfigMixin.tra("取消"))
 
         # 设置主布局
         self.viewLayout.setContentsMargins(16, 16, 16, 16) # 左、上、右、下
