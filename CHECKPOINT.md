@@ -129,3 +129,20 @@ English. Commit and update this file after each important, verified unit of work
 - Blocked / open question: none.
 - Next: Thai for EditView.json (core translation screen, ~252 keys) as its own unit, then
   ApplicationSettings.json + APIManagement.json (setup screens).
+
+## 2026-09-05 — localization: Thai for EditView (core translation screen)
+- Done:
+  - Added `ไทย` to all 252 EditView.json entries (translated from the existing English), applied
+    globally so shared keys stay consistent. Verified via the real loader in ไทย mode: 0 EditView keys
+    left without Thai; format placeholders ({}, {0}, '{}') and embedded real newlines preserved.
+  - Found a pre-existing upstream quirk: `load_translations` merges all files flat (last-wins), so a
+    Chinese key reused with different English in different files collapses to one value for ALL
+    languages. 18 keys have conflicting English across files; most are near-synonyms (Other/Others,
+    Line/Row). The one semantic clash — `术语表` = "Glossary" (nav) vs "Term Table" (analysis) — made
+    my Thai disagree with the winning English, so I aligned `术语表`→`คลังคำศัพท์` (Glossary) to match
+    what English users actually see. Fully fixing these needs a per-file/namespace merge (out of scope).
+  - Thai coverage across all Localization files is now 476/945 entries (up from 187).
+- Deviated from expected behavior: none.
+- Blocked / open question: none.
+- Next: Thai for ApplicationSettings.json + APIManagement.json (setup screens) if continuing; the
+  remaining pages stay on the English-fallback until then.
