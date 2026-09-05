@@ -657,6 +657,20 @@
       "English": "Style Content",
       "日本語": "スタイルコンテンツ",
       "ไทย": "เนื้อหาสไตล์"
+    },
+    "AiNiee macOS 支持": {
+      "简中": "AiNiee macOS 支持",
+      "繁中": "AiNiee macOS 支持",
+      "English": "AiNiee macOS Support",
+      "日本語": "AiNiee macOS サポート",
+      "ไทย": "การรองรับ AiNiee บน macOS"
+    },
+    "配置目录": {
+      "简中": "配置目录",
+      "繁中": "配置目錄",
+      "English": "Config Directory",
+      "日本語": "設定ディレクトリ",
+      "ไทย": "โฟลเดอร์คอนฟิก"
     }
   }
 }

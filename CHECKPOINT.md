@@ -75,3 +75,18 @@ English. Commit and update this file after each important, verified unit of work
 - Blocked / open question: none.
 - Next: bulk-add ไทย to the 848 pre-existing entries (so Thai mode shows Thai, not English fallback),
   then sweep the ~291 hardcoded Chinese literals to wrap user-facing ones in `tra()`.
+
+## 2026-09-05 — localization: caught tra() alias calls (translate/bare tra)
+- Done:
+  - Realized the earlier ast check only matched `.tra(` and missed calls via a `translate` parameter
+    alias (e.g. AnalysisPage) and bare `tra(...)` (e.g. MacOSUI). Re-ran an ast detector covering
+    `.tra(`, bare `tra(`, and `translate(` across the whole repo: 640 distinct literals, only 3 were
+    uncovered — `AiNiee` (proper noun, correctly left untranslated) plus `AiNiee macOS 支持` and
+    `配置目录`, which I added to Supplement.json (English + Thai + parity fields).
+  - Re-verified: the **entire tra()/translate() call surface now resolves to English or Thai** for
+    every key except the app-name literal.
+- Deviated from expected behavior: none.
+- Blocked / open question: none.
+- Next: (a) bulk-add ไทย to the 848 pre-existing entries so Thai mode stops relying on the English
+  fallback; (b) sweep the genuinely hardcoded Chinese literals (never call tra()) — the only remaining
+  source of Chinese in an English/Thai UI.
