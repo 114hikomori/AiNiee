@@ -165,3 +165,25 @@ English. Commit and update this file after each important, verified unit of work
 - Next (if continuing): Thai for the secondary pages (AdvancedSettings, PromptSettings, OutputSettings,
     TableSettings, TaskSettings, MonitoringPage, ProofreadingCheck, TranslationChecker, VersionManager,
     BasicTablePage, LogView). Deferred per user: the hardcoded f-string/dict sweep.
+
+## 2026-09-05 — push + merge to main (user-authorized)
+- Done:
+  - Pushed `localize-en-th` to `origin` (114hikomori/AiNiee) and set upstream. Pre-push checks:
+    CI workflow triggers only on `push: branches: [main]` (`.github/workflows/main.yml:4-8`) so the
+    feature branch could not fire the auto-"Beta" release; diff `main..localize-en-th` contains no
+    secret paths (`docs/`, `Resource/config.json`, `.env`); user then confirmed the workflow was
+    disabled in the GitHub UI (owner-side setting, not readable by local tooling) — cross-checked
+    remotely: no `Beta` tag exists and `origin/main` was still at the fork point `39756bb`, so the
+    release has never fired from this fork.
+  - **User explicitly authorized merging to main** ("เอาเข้า main เลย") after those checks.
+  - Merged `localize-en-th` into `main` (fast-forward from `39756bb`; no divergence) and pushed
+    `main` to `origin` with the user's prior confirmation that the workflow is disabled, so no
+    auto-"Beta" release should fire. This makes the English+Thai localization + docs-secret
+    gitignore the fork's official main line.
+  - Verified: 642 tra()/translate() strings render non-Chinese in both English and ไทย modes;
+    all Localization JSON valid; working tree clean.
+- Deviated from expected behavior: none.
+- Blocked / open question: none.
+- Next: if the Beta build fires unexpectedly despite the disable, check Actions logs (needs the
+  user to paste them — no local tool can read Actions). Remaining work stays as deferred items:
+  Thai for secondary pages, and the hardcoded f-string/dict sweep.
