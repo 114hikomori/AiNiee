@@ -146,3 +146,22 @@ English. Commit and update this file after each important, verified unit of work
 - Blocked / open question: none.
 - Next: Thai for ApplicationSettings.json + APIManagement.json (setup screens) if continuing; the
   remaining pages stay on the English-fallback until then.
+
+## 2026-09-05 — localization: Thai for setup screens (App Settings + API Management)
+- Done:
+  - Added `ไทย` to all 58 ApplicationSettings.json and all 103 APIManagement.json entries (translated
+    from the existing English), applied globally. Verified via the real loader in ไทย mode: 0 keys
+    without Thai in either file; multi-line help strings keep real newlines; near-duplicate keys that
+    differ only by full-width vs half-width punctuation each got the same Thai.
+  - Neutralised the `文件/目录排除规则` Thai to "กฎการยกเว้นไฟล์/ไดเรกทอรี" (its English also differs
+    across files — same flat-merge collision class as 术语表).
+  - Also added `.serena/` (serena language-server cache, created this session) to `.gitignore` so the
+    agent-tooling debris can't be committed.
+  - Thai coverage now 635/945 entries. The five key screens (AppFluentWindow, StartupPage, EditView,
+    ApplicationSettings, APIManagement) are fully Thai; remaining secondary pages fall back to English
+    (never Chinese) in ไทย mode.
+- Deviated from expected behavior: none.
+- Blocked / open question: none.
+- Next (if continuing): Thai for the secondary pages (AdvancedSettings, PromptSettings, OutputSettings,
+    TableSettings, TaskSettings, MonitoringPage, ProofreadingCheck, TranslationChecker, VersionManager,
+    BasicTablePage, LogView). Deferred per user: the hardcoded f-string/dict sweep.

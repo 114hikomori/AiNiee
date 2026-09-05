@@ -25,6 +25,8 @@ PluginScripts/IOPlugins/*
 
 # IDE配置
 .idea/
+# Serena language-server project cache (agent tooling debris)
+.serena/
 # 构建文件
 *.spec
 .DS_Store
